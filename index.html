@@ -49,6 +49,9 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;b
 .gratitude-input::placeholder{color:var(--text-hint)}
 .save-row{display:flex;justify-content:flex-end;margin-top:10px}
 .save-small-btn{padding:7px 18px;border-radius:20px;border:1.5px solid var(--pink);background:white;color:var(--pink-dark);font-size:13px;font-weight:600;cursor:pointer}
+.diary-input{width:100%;border:1px solid var(--pink-mid);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;font-family:inherit;background:var(--pink-light);color:var(--text);outline:none;resize:none;line-height:1.6}
+.diary-input:focus{border-color:var(--pink);background:white}
+.diary-input::placeholder{color:var(--text-hint)}
 .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .cal-title{font-size:15px;font-weight:700}
 .cal-nav-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);padding:4px 8px}
@@ -122,6 +125,11 @@ body{font-family:-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;b
       </div>
       <div class="save-row"><button class="save-small-btn" id="gratSaveBtn">저장</button></div>
     </div>
+    <div class="section-card" id="diarySection" style="display:none">
+      <div class="sc-title">오늘 하루 한 줄 일기 ✍️</div>
+      <textarea class="diary-input" id="diaryInput" placeholder="오늘 하루를 한 줄로 표현하면?" maxlength="100" rows="2"></textarea>
+      <div class="save-row"><button class="save-small-btn" id="diarySaveBtn">저장</button></div>
+    </div>
   </div>
 
   <div class="page" id="pageRecord">
@@ -171,6 +179,7 @@ if(!data.lastDate)data.lastDate='';
 if(!data.moods)data.moods={};
 if(!data.moodEmojis)data.moodEmojis={};
 if(!data.gratitude)data.gratitude={};
+if(!data.diary)data.diary={};
 function saveD(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
 
 var todayDate=new Date();
@@ -219,6 +228,8 @@ function generate(){
     document.getElementById('cardActions').style.display='flex';
     document.getElementById('moodSection').style.display='block';
     document.getElementById('gratSection').style.display='block';
+    document.getElementById('diarySection').style.display='block';
+    loadDiary();
     loadGratitude();loadMood();bumpStreak();
     loading=false;btn.disabled=false;btn.textContent='다시 받기';
   },380);
@@ -295,6 +306,8 @@ function showDayDetail(ds){
   var parts=[];
   if(emoji)parts.push('<div class="dd-row"><span class="dd-label">기분</span><span>'+emoji+' '+['','힘들어','별로','보통','좋아','최고'][mood||0]+'</span></div>');
   if(grat&&grat.some(Boolean))grat.filter(Boolean).forEach(function(g,i){parts.push('<div class="dd-row"><span class="dd-label">감사'+(i+1)+'</span><span>'+g+'</span></div>');});
+  var diary=data.diary?data.diary[ds]:null;
+  if(diary)parts.push('<div class="dd-row"><span class="dd-label">일기</span><span>'+diary+'</span></div>');
   if(!parts.length){detail.classList.remove('visible');return;}
   var arr=ds.split('-');
   detail.innerHTML='<div class="dd-date">'+arr[0]+'년 '+parseInt(arr[1])+'월 '+parseInt(arr[2])+'일</div>'+parts.join('');
@@ -327,6 +340,15 @@ function renderSaved(){
   if(!data.saved.length){list.innerHTML='<div class="empty-state"><div class="e-icon">🌸</div>아직 저장한 명언이 없어.<br>마음에 드는 명언을 저장해봐!</div>';return;}
   list.innerHTML=data.saved.map(function(s){return '<div class="saved-item"><div class="si-text">“'+s.quote+'”</div><div class="si-meta">'+(s.author?'— '+s.author+' · ':'')+s.date+'</div></div>';}).join('');
 }
+function loadDiary(){
+  document.getElementById('diaryInput').value=data.diary[today]||'';
+}
+document.getElementById('diarySaveBtn').addEventListener('click',function(){
+  var v=document.getElementById('diaryInput').value.trim();
+  if(!v)return;
+  data.diary[today]=v;saveD();toast('일기 저장 ✓');
+});
+
 document.querySelectorAll('.tab-btn').forEach(function(btn){
   btn.addEventListener('click',function(){switchTab(btn.dataset.tab);});
 });
