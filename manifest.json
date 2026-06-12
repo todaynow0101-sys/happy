@@ -2,7 +2,7 @@
   "name": "예지",
   "short_name": "예지",
   "description": "하루를 시작하는 명언과 다짐",
-  "start_url": "/",
+"start_url": "/happy/"
   "display": "standalone",
   "background_color": "#fff5f6",
   "theme_color": "#ff9aa2",
