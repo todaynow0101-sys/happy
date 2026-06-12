@@ -63,18 +63,18 @@
 
   /* Theme chips */
   .themes {
-    display: flex; gap: 8px; overflow-x: auto;
-    padding: 4px 0 12px; scrollbar-width: none;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    padding: 4px 0 12px;
   }
-  .themes::-webkit-scrollbar { display: none; }
   .chip {
-    flex-shrink: 0;
-    padding: 7px 14px; border-radius: 20px;
-    font-size: 13px; font-weight: 500;
+    padding: 6px 4px; border-radius: 16px;
+    font-size: 11px; font-weight: 500;
     border: 1.5px solid var(--pink-mid);
     background: white; color: var(--text-muted);
     cursor: pointer; transition: all 0.18s;
-    white-space: nowrap;
+    text-align: center; white-space: nowrap;
   }
   .chip.active {
     background: var(--pink); border-color: var(--pink);
@@ -205,9 +205,33 @@
   .saved-item .si-text { font-size: 14px; line-height: 1.6; color: var(--text); }
   .saved-item .si-meta { font-size: 11px; color: var(--text-hint); margin-top: 6px; }
 
+  /* Bottom tab nav */
+  .tab-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: white; border-top: 1px solid var(--pink-mid);
+    display: flex; padding-bottom: env(safe-area-inset-bottom); z-index: 100;
+  }
+  .tab-btn {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 10px 0 8px; gap: 3px;
+    font-size: 11px; font-weight: 500; color: var(--text-hint);
+    cursor: pointer; border: none; background: none;
+  }
+  .tab-btn .tab-icon { font-size: 22px; line-height: 1; }
+  .tab-btn.active { color: var(--pink); }
+
+  .page { display: none; }
+  .page.active { display: block; }
+  .app { padding-bottom: calc(env(safe-area-inset-bottom) + 72px); }
+
+  /* Saved page empty state */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-hint); font-size: 14px; }
+  .empty-state .emoji { font-size: 40px; margin-bottom: 12px; }
+
   /* Toast */
   .toast {
-    position: fixed; bottom: calc(env(safe-area-inset-bottom) + 28px);
+    position: fixed; bottom: calc(env(safe-area-inset-bottom) + 70px);
     left: 50%; transform: translateX(-50%) translateY(10px);
     background: var(--text); color: white;
     padding: 10px 20px; border-radius: 20px;
@@ -220,6 +244,7 @@
 </head>
 <body>
 <div class="app">
+<div class="page active" id="pageHome">
   <div class="header">
     <div class="header-left">
       <h1>오늘의 한 마디 🌱</h1>
@@ -265,11 +290,26 @@
     <div class="clear"></div>
   </div>
 
-  <div class="saved-section" id="savedSection" style="display:none">
-    <div class="section-title">🔖 저장한 명언</div>
-    <div id="savedList"></div>
+</div><!-- /pageHome -->
+
+<div class="page" id="pageSaved">
+  <div class="header" style="margin-bottom:4px">
+    <div class="header-left"><h1>저장한 명언 🔖</h1></div>
+    <div class="streak-pill"><span class="flame">🔥</span><span id="streakNum2">0</span>일</div>
   </div>
+  <div id="savedList"></div>
 </div>
+
+</div><!-- /app -->
+
+<nav class="tab-nav">
+  <button class="tab-btn active" id="tabHome" onclick="switchTab('home')">
+    <span class="tab-icon">🌱</span>오늘
+  </button>
+  <button class="tab-btn" id="tabSaved" onclick="switchTab('saved')">
+    <span class="tab-icon">🔖</span>저장
+  </button>
+</nav>
 
 <div class="toast" id="toast"></div>
 
@@ -391,9 +431,11 @@ document.getElementById('reflSaveBtn').addEventListener('click', () => {
 
 function renderSaved() {
   const list = document.getElementById('savedList');
-  const sec = document.getElementById('savedSection');
-  if (!data.saved.length) { sec.style.display = 'none'; return; }
-  sec.style.display = 'block';
+  document.getElementById('streakNum2').textContent = data.streak;
+  if (!data.saved.length) {
+    list.innerHTML = '<div class="empty-state"><div class="emoji">🌸</div>아직 저장한 명언이 없어<br>마음에 드는 명언을 저장해봐!</div>';
+    return;
+  }
   list.innerHTML = data.saved.map(s =>
     `<div class="saved-item">
       <div class="si-text">\u201C${s.quote}\u201D</div>
@@ -407,6 +449,14 @@ function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function switchTab(tab) {
+  document.getElementById('pageHome').classList.toggle('active', tab === 'home');
+  document.getElementById('pageSaved').classList.toggle('active', tab === 'saved');
+  document.getElementById('tabHome').classList.toggle('active', tab === 'home');
+  document.getElementById('tabSaved').classList.toggle('active', tab === 'saved');
+  if (tab === 'saved') renderSaved();
 }
 
 if ('serviceWorker' in navigator) {
