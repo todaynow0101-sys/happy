@@ -6,308 +6,226 @@
 <meta name="theme-color" content="#ff9aa2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="한마디">
+<meta name="apple-mobile-web-app-title" content="예지">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-192x192.png">
 <title>오늘의 한 마디</title>
 <style>
-  :root {
-    --pink: #ff9aa2;
-    --pink-light: #fff0f1;
-    --pink-mid: #ffd6d9;
-    --pink-dark: #d96b75;
-    --text: #2d2326;
-    --text-muted: #9e7e83;
-    --text-hint: #c4a9ae;
-    --bg: #fffcfc;
-    --card: #ffffff;
-    --border: rgba(255,154,162,0.18);
-    --radius: 20px;
-    --radius-sm: 12px;
-  }
+:root {
+  --pink: #ff9aa2;
+  --pink-light: #fff0f1;
+  --pink-mid: #ffd6d9;
+  --pink-dark: #d96b75;
+  --text: #2d2326;
+  --text-muted: #9e7e83;
+  --text-hint: #c4a9ae;
+  --bg: #fffcfc;
+  --card: #ffffff;
+  --border: rgba(255,154,162,0.18);
+  --radius: 20px;
+  --radius-sm: 12px;
+  --nav-h: 56px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100dvh; overscroll-behavior: none;
+}
+.app {
+  max-width: 430px; margin: 0 auto;
+  padding: 0 20px calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+}
+.page { display: none; }
+.page.active { display: block; }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* Header */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: calc(env(safe-area-inset-top) + 20px) 0 16px;
+}
+.header-left h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+.header-left .date { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.streak-pill {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--pink-light); border: 1px solid var(--pink-mid);
+  border-radius: 20px; padding: 6px 12px;
+  font-size: 13px; font-weight: 600; color: var(--pink-dark);
+}
 
-  body {
-    font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100dvh;
-    min-height: -webkit-fill-available;
-    overscroll-behavior: none;
-  }
+/* Theme chips — 5 equal columns */
+.themes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 14px; }
+.chip {
+  padding: 7px 2px; border-radius: 16px; text-align: center;
+  font-size: 11px; font-weight: 500; white-space: nowrap;
+  border: 1.5px solid var(--pink-mid); background: white; color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s;
+}
+.chip.active { background: var(--pink); border-color: var(--pink); color: white; font-weight: 600; }
 
-  .app {
-    max-width: 430px;
-    margin: 0 auto;
-    padding: 0 20px;
-    padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
-  }
+/* Quote card */
+.quote-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 24px 22px;
+  margin-bottom: 14px; min-height: 180px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative; overflow: hidden;
+}
+.quote-card::before {
+  content: "\201C"; position: absolute; top: 10px; left: 16px;
+  font-size: 64px; line-height: 1; color: var(--pink-mid);
+  font-family: Georgia, serif; pointer-events: none;
+}
+.quote-body { padding-top: 24px; }
+.quote-text { font-size: 17px; line-height: 1.7; color: var(--text); word-break: keep-all; }
+.quote-text.placeholder { color: var(--text-hint); font-size: 15px; }
+.quote-author { font-size: 13px; color: var(--text-muted); margin-top: 14px; font-weight: 500; }
+.dots { display: flex; gap: 6px; align-items: center; padding: 20px 0; }
+.dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--pink-mid); animation: blink 1.2s ease-in-out infinite; }
+.dots span:nth-child(2) { animation-delay: .2s; }
+.dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%,80%,100%{opacity:.25} 40%{opacity:1} }
 
-  /* Header */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: calc(env(safe-area-inset-top) + 20px) 0 16px;
-  }
-  .header-left h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-  .header-left .date { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
-  .streak-pill {
-    display: flex; align-items: center; gap: 5px;
-    background: var(--pink-light); border: 1px solid var(--pink-mid);
-    border-radius: 20px; padding: 6px 12px;
-    font-size: 13px; font-weight: 600; color: var(--pink-dark);
-  }
-  .streak-pill .flame { font-size: 15px; }
+/* Card actions */
+.card-actions { display: flex; gap: 8px; margin-bottom: 14px; }
+.card-actions button {
+  flex: 1; padding: 11px 8px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--pink-mid); background: white; color: var(--text-muted);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.card-actions button:active { transform: scale(0.97); }
+.card-actions button.saved-btn { color: var(--pink-dark); border-color: var(--pink); background: var(--pink-light); }
 
-  /* Theme chips */
-  .themes {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
-    padding: 4px 0 12px;
-  }
-  .chip {
-    padding: 6px 4px; border-radius: 16px;
-    font-size: 11px; font-weight: 500;
-    border: 1.5px solid var(--pink-mid);
-    background: white; color: var(--text-muted);
-    cursor: pointer; transition: all 0.18s;
-    text-align: center; white-space: nowrap;
-  }
-  .chip.active {
-    background: var(--pink); border-color: var(--pink);
-    color: white; font-weight: 600;
-  }
+/* Generate button */
+.gen-btn {
+  width: 100%; padding: 15px; background: var(--pink); color: white;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  letter-spacing: -0.3px; margin-bottom: 20px;
+}
+.gen-btn:active { opacity: 0.88; transform: scale(0.98); }
+.gen-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-  /* Quote card */
-  .quote-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 28px 24px 22px;
-    margin-bottom: 14px;
-    box-shadow: 0 4px 24px rgba(255,154,162,0.10);
-    min-height: 200px;
-    display: flex; flex-direction: column; justify-content: space-between;
-    position: relative; overflow: hidden;
-  }
-  .quote-card::before {
-    content: '\201C';
-    position: absolute; top: 12px; left: 18px;
-    font-size: 72px; line-height: 1;
-    color: var(--pink-mid); font-family: Georgia, serif;
-    pointer-events: none;
-  }
-  .quote-body { padding-top: 28px; flex: 1; }
-  .quote-text {
-    font-size: 18px; line-height: 1.7; font-weight: 400;
-    color: var(--text); word-break: keep-all;
-    font-family: 'Apple SD Gothic Neo', 'Noto Serif KR', serif;
-  }
-  .quote-text.placeholder { color: var(--text-hint); font-size: 15px; font-style: normal; }
-  .quote-author {
-    font-size: 13px; color: var(--text-muted);
-    margin-top: 16px; font-weight: 500;
-  }
-  .quote-context {
-    font-size: 13px; color: var(--text-muted);
-    margin-top: 10px; line-height: 1.6;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
-  }
-  .dots { display: flex; gap: 6px; align-items: center; padding: 24px 0; }
-  .dots span {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--pink-mid);
-    animation: blink 1.2s ease-in-out infinite;
-  }
-  .dots span:nth-child(2) { animation-delay: .2s; }
-  .dots span:nth-child(3) { animation-delay: .4s; }
-  @keyframes blink { 0%,80%,100%{opacity:.25} 40%{opacity:1} }
+/* Reflection */
+.reflection-box {
+  background: var(--pink-light); border: 1px solid var(--pink-mid);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 16px;
+}
+.reflection-box label { font-size: 13px; font-weight: 600; color: var(--pink-dark); display: block; margin-bottom: 10px; }
+.reflection-box textarea {
+  width: 100%; border: 1px solid var(--pink-mid); border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 15px; font-family: inherit;
+  background: white; color: var(--text); resize: none; outline: none; line-height: 1.6;
+}
+.reflection-box textarea:focus { border-color: var(--pink); }
+.reflection-box textarea::placeholder { color: var(--text-hint); }
+.reflection-save {
+  margin-top: 10px; float: right; padding: 7px 16px; border-radius: 20px;
+  border: 1.5px solid var(--pink); background: white;
+  color: var(--pink-dark); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.clear { clear: both; }
 
-  /* Card actions */
-  .card-actions {
-    display: flex; gap: 8px; margin-bottom: 14px;
-  }
-  .card-actions button {
-    flex: 1; padding: 11px 8px;
-    border-radius: var(--radius-sm);
-    border: 1.5px solid var(--pink-mid);
-    background: white; color: var(--text-muted);
-    font-size: 13px; font-weight: 500;
-    cursor: pointer; display: flex;
-    align-items: center; justify-content: center; gap: 6px;
-    transition: all 0.15s;
-  }
-  .card-actions button:active { transform: scale(0.97); }
-  .card-actions button.saved-btn {
-    color: var(--pink-dark); border-color: var(--pink);
-    background: var(--pink-light);
-  }
-  .icon { font-size: 16px; }
+/* Saved page */
+.saved-item {
+  background: white; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 10px;
+}
+.saved-item .si-text { font-size: 14px; line-height: 1.6; color: var(--text); }
+.saved-item .si-meta { font-size: 11px; color: var(--text-hint); margin-top: 6px; }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-hint); font-size: 14px; line-height: 1.8; }
+.empty-state .e-icon { font-size: 44px; margin-bottom: 12px; }
 
-  /* Generate button */
-  .gen-btn {
-    width: 100%; padding: 15px;
-    background: var(--pink); color: white;
-    border: none; border-radius: var(--radius-sm);
-    font-size: 16px; font-weight: 700;
-    cursor: pointer; letter-spacing: -0.3px;
-    transition: all 0.15s; margin-bottom: 20px;
-  }
-  .gen-btn:active { transform: scale(0.98); opacity: 0.9; }
-  .gen-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Bottom tab nav — fixed, always on top */
+.tab-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: white; border-top: 1px solid var(--pink-mid);
+  display: flex; height: var(--nav-h);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tab-btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; font-weight: 500; color: var(--text-hint);
+}
+.tab-btn .ti { font-size: 22px; }
+.tab-btn.active { color: var(--pink); }
 
-  /* Reflection */
-  .reflection-box {
-    background: var(--pink-light);
-    border: 1px solid var(--pink-mid);
-    border-radius: var(--radius);
-    padding: 20px; margin-bottom: 20px;
-  }
-  .reflection-box label {
-    font-size: 13px; font-weight: 600; color: var(--pink-dark);
-    display: block; margin-bottom: 10px;
-  }
-  .reflection-box textarea {
-    width: 100%; border: 1px solid var(--pink-mid);
-    border-radius: var(--radius-sm); padding: 12px 14px;
-    font-size: 15px; font-family: inherit;
-    background: white; color: var(--text);
-    resize: none; outline: none;
-    line-height: 1.6;
-  }
-  .reflection-box textarea:focus { border-color: var(--pink); }
-  .reflection-box textarea::placeholder { color: var(--text-hint); }
-  .reflection-save {
-    margin-top: 10px; float: right;
-    padding: 8px 18px; border-radius: 20px;
-    border: 1.5px solid var(--pink); background: white;
-    color: var(--pink-dark); font-size: 13px; font-weight: 600;
-    cursor: pointer;
-  }
-  .reflection-save:active { background: var(--pink-light); }
-  .clear { clear: both; }
-
-  /* Saved section */
-  .saved-section { margin-bottom: 20px; }
-  .section-title {
-    font-size: 14px; font-weight: 600; color: var(--text-muted);
-    margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
-  }
-  .saved-item {
-    background: white; border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: 14px 16px;
-    margin-bottom: 8px;
-  }
-  .saved-item .si-text { font-size: 14px; line-height: 1.6; color: var(--text); }
-  .saved-item .si-meta { font-size: 11px; color: var(--text-hint); margin-top: 6px; }
-
-  /* Bottom tab nav */
-  .tab-nav {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    background: white; border-top: 1px solid var(--pink-mid);
-    display: flex; padding-bottom: env(safe-area-inset-bottom); z-index: 100;
-  }
-  .tab-btn {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 10px 0 8px; gap: 3px;
-    font-size: 11px; font-weight: 500; color: var(--text-hint);
-    cursor: pointer; border: none; background: none;
-  }
-  .tab-btn .tab-icon { font-size: 22px; line-height: 1; }
-  .tab-btn.active { color: var(--pink); }
-
-  .page { display: none; }
-  .page.active { display: block; }
-  .app { padding-bottom: calc(env(safe-area-inset-bottom) + 72px); }
-
-  /* Saved page empty state */
-  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-hint); font-size: 14px; }
-  .empty-state .emoji { font-size: 40px; margin-bottom: 12px; }
-
-  /* Toast */
-  .toast {
-    position: fixed; bottom: calc(env(safe-area-inset-bottom) + 70px);
-    left: 50%; transform: translateX(-50%) translateY(10px);
-    background: var(--text); color: white;
-    padding: 10px 20px; border-radius: 20px;
-    font-size: 13px; font-weight: 500;
-    opacity: 0; transition: all 0.25s; pointer-events: none;
-    white-space: nowrap; z-index: 999;
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* Toast */
+.toast {
+  position: fixed; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 12px);
+  left: 50%; transform: translateX(-50%) translateY(8px);
+  background: var(--text); color: white; padding: 10px 20px;
+  border-radius: 20px; font-size: 13px; font-weight: 500;
+  opacity: 0; transition: all 0.25s; pointer-events: none;
+  white-space: nowrap; z-index: 9999;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 <div class="app">
-<div class="page active" id="pageHome">
-  <div class="header">
-    <div class="header-left">
-      <h1>오늘의 한 마디 🌱</h1>
-      <div class="date" id="dateLabel"></div>
+
+  <!-- HOME PAGE -->
+  <div class="page active" id="pageHome">
+    <div class="header">
+      <div class="header-left">
+        <h1>오늘의 한 마디 🌱</h1>
+        <div class="date" id="dateLabel"></div>
+      </div>
+      <div class="streak-pill">🔥 <span id="streakNum">0</span>일</div>
     </div>
-    <div class="streak-pill">
-      <span class="flame">🔥</span>
-      <span id="streakNum">0</span>일
+
+    <div class="themes">
+      <div class="chip active" data-theme="도전·동기부여">🔥 도전</div>
+      <div class="chip" data-theme="평온·마음챙김">🌿 평온</div>
+      <div class="chip" data-theme="성장·배움">📚 성장</div>
+      <div class="chip" data-theme="감사·관계">🤝 감사</div>
+      <div class="chip" data-theme="용기·결단">⚡ 용기</div>
+    </div>
+
+    <div class="quote-card">
+      <div class="quote-body">
+        <div class="quote-text placeholder" id="quoteText">테마를 고르고<br>명언 받기를 눌러봐 ✨</div>
+        <div class="quote-author" id="quoteAuthor" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="card-actions" id="cardActions" style="display:none">
+      <button id="saveBtn">🔖 저장</button>
+      <button id="regenBtn">🔄 다시 받기</button>
+    </div>
+
+    <button class="gen-btn" id="genBtn">오늘의 명언 받기</button>
+
+    <div class="reflection-box" id="reflectionBox" style="display:none">
+      <label>🌅 오늘 기대되는 것, 딱 하나는?</label>
+      <textarea id="reflectionInput" rows="2" placeholder="짧게라도 써봐. 하루가 달라져."></textarea>
+      <button class="reflection-save" id="reflSaveBtn">저장</button>
+      <div class="clear"></div>
     </div>
   </div>
 
-  <div class="themes" id="themeRow">
-    <div class="chip active" data-theme="도전·동기부여">🔥 도전</div>
-    <div class="chip" data-theme="평온·마음챙김">🌿 평온</div>
-    <div class="chip" data-theme="성장·배움">📚 성장</div>
-    <div class="chip" data-theme="감사·관계">🤝 감사</div>
-    <div class="chip" data-theme="용기·결단">⚡ 용기</div>
-  </div>
-
-  <div class="quote-card" id="quoteCard">
-    <div class="quote-body">
-      <div class="quote-text placeholder" id="quoteText">테마를 고르고<br>명언 받기를 눌러봐 ✨</div>
-      <div class="quote-author" id="quoteAuthor" style="display:none"></div>
-      <div class="quote-context" id="quoteContext" style="display:none"></div>
+  <!-- SAVED PAGE -->
+  <div class="page" id="pageSaved">
+    <div class="header">
+      <div class="header-left"><h1>저장한 명언 🔖</h1></div>
+      <div class="streak-pill">🔥 <span id="streakNum2">0</span>일</div>
     </div>
+    <div id="savedList"></div>
   </div>
-
-  <div class="card-actions" id="cardActions" style="display:none">
-    <button id="saveBtn">
-      <span class="icon">🔖</span> 저장
-    </button>
-    <button id="regenBtn">
-      <span class="icon">🔄</span> 다시 받기
-    </button>
-  </div>
-
-  <button class="gen-btn" id="genBtn">오늘의 명언 받기</button>
-
-  <div class="reflection-box" id="reflectionBox" style="display:none">
-    <label>🌅 오늘 기대되는 것, 딱 하나는?</label>
-    <textarea id="reflectionInput" rows="2" placeholder="짧게라도 써봐. 하루가 달라져."></textarea>
-    <button class="reflection-save" id="reflSaveBtn">저장</button>
-    <div class="clear"></div>
-  </div>
-
-</div><!-- /pageHome -->
-
-<div class="page" id="pageSaved">
-  <div class="header" style="margin-bottom:4px">
-    <div class="header-left"><h1>저장한 명언 🔖</h1></div>
-    <div class="streak-pill"><span class="flame">🔥</span><span id="streakNum2">0</span>일</div>
-  </div>
-  <div id="savedList"></div>
-</div>
 
 </div><!-- /app -->
 
+<!-- TAB NAV -->
 <nav class="tab-nav">
   <button class="tab-btn active" id="tabHome" onclick="switchTab('home')">
-    <span class="tab-icon">🌱</span>오늘
+    <span class="ti">🌱</span>오늘
   </button>
   <button class="tab-btn" id="tabSaved" onclick="switchTab('saved')">
-    <span class="tab-icon">🔖</span>저장
+    <span class="ti">🔖</span>저장
   </button>
 </nav>
 
@@ -318,7 +236,7 @@ const QUOTES = {"도전·동기부여": [{"quote": "시작이 반이다.", "auth
 
 const KEY = 'otnq_v1';
 function load() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } }
-function save(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch {} }
+function saveD(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch {} }
 
 let data = load();
 if (!data.saved) data.saved = [];
@@ -333,6 +251,7 @@ document.getElementById('dateLabel').textContent =
 
 function renderStreak() {
   document.getElementById('streakNum').textContent = data.streak;
+  document.getElementById('streakNum2').textContent = data.streak;
 }
 renderStreak();
 
@@ -342,8 +261,7 @@ function bumpStreak() {
   const ys = yd.toISOString().split('T')[0];
   data.streak = data.lastDate === ys ? data.streak + 1 : 1;
   data.lastDate = today;
-  save(data);
-  renderStreak();
+  saveD(data); renderStreak();
 }
 
 let currentTheme = '도전·동기부여';
@@ -363,42 +281,35 @@ function getRandomQuote(theme) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-
+function generate() {
   if (loading) return;
   loading = true;
   const btn = document.getElementById('genBtn');
   btn.disabled = true; btn.textContent = '고르는 중...';
   document.getElementById('cardActions').style.display = 'none';
   document.getElementById('saveBtn').classList.remove('saved-btn');
-  document.getElementById('saveBtn').innerHTML = '<span class="icon">🔖</span> 저장';
-
+  document.getElementById('saveBtn').textContent = '🔖 저장';
   const qt = document.getElementById('quoteText');
   const qa = document.getElementById('quoteAuthor');
-  const qc = document.getElementById('quoteContext');
   qt.className = 'quote-text';
   qt.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
-  qa.style.display = 'none'; qc.style.display = 'none';
+  qa.style.display = 'none';
 
   setTimeout(() => {
     const p = getRandomQuote(currentTheme);
     if (!p) {
-      qt.textContent = '명언을 찾지 못했어. 다시 눌러봐.';
-      qt.classList.add('placeholder');
-      loading = false;
-      btn.disabled = false; btn.textContent = '다시 받기';
-      return;
+      qt.textContent = '다시 눌러봐.'; qt.classList.add('placeholder');
+      loading = false; btn.disabled = false; btn.textContent = '다시 받기'; return;
     }
     curQuote = p.quote || ''; curAuthor = p.author || '';
     qt.textContent = '\u201C' + curQuote + '\u201D';
     if (curAuthor) { qa.textContent = '— ' + curAuthor; qa.style.display = 'block'; }
-    qc.style.display = 'none';
     document.getElementById('cardActions').style.display = 'flex';
     document.getElementById('reflectionBox').style.display = 'block';
-    loadReflection();
+    document.getElementById('reflectionInput').value = data.reflections[today] || '';
     bumpStreak();
-    loading = false;
-    btn.disabled = false; btn.textContent = '다시 받기';
-  }, 400);
+    loading = false; btn.disabled = false; btn.textContent = '다시 받기';
+  }, 380);
 }
 
 document.getElementById('genBtn').addEventListener('click', generate);
@@ -406,49 +317,32 @@ document.getElementById('regenBtn').addEventListener('click', generate);
 
 document.getElementById('saveBtn').addEventListener('click', () => {
   if (!curQuote) return;
-  if (data.saved.find(s => s.quote === curQuote)) { toast('이미 저장된 명언이야'); return; }
+  if (data.saved.find(s => s.quote === curQuote)) { toast('이미 저장됨'); return; }
   data.saved.unshift({ quote: curQuote, author: curAuthor, theme: currentTheme, date: today });
   if (data.saved.length > 50) data.saved = data.saved.slice(0, 50);
-  save(data);
+  saveD(data);
   const sb = document.getElementById('saveBtn');
-  sb.classList.add('saved-btn');
-  sb.innerHTML = '<span class="icon">✅</span> 저장됨';
-  renderSaved();
+  sb.classList.add('saved-btn'); sb.textContent = '✅ 저장됨';
   toast('저장했어 ✓');
 });
-
-function loadReflection() {
-  document.getElementById('reflectionInput').value = data.reflections[today] || '';
-}
 
 document.getElementById('reflSaveBtn').addEventListener('click', () => {
   const v = document.getElementById('reflectionInput').value.trim();
   if (!v) return;
-  data.reflections[today] = v;
-  save(data);
-  toast('다짐 저장 ✓');
+  data.reflections[today] = v; saveD(data); toast('다짐 저장 ✓');
 });
 
 function renderSaved() {
   const list = document.getElementById('savedList');
   document.getElementById('streakNum2').textContent = data.streak;
   if (!data.saved.length) {
-    list.innerHTML = '<div class="empty-state"><div class="emoji">🌸</div>아직 저장한 명언이 없어<br>마음에 드는 명언을 저장해봐!</div>';
+    list.innerHTML = '<div class="empty-state"><div class="e-icon">🌸</div>아직 저장한 명언이 없어.<br>마음에 드는 명언을 저장해봐!</div>';
     return;
   }
   list.innerHTML = data.saved.map(s =>
-    `<div class="saved-item">
-      <div class="si-text">\u201C${s.quote}\u201D</div>
-      <div class="si-meta">${s.author ? '— ' + s.author + ' · ' : ''}${s.theme} · ${s.date}</div>
-    </div>`
+    '<div class="saved-item"><div class="si-text">\u201C' + s.quote + '\u201D</div>' +
+    '<div class="si-meta">' + (s.author ? '— ' + s.author + ' · ' : '') + s.theme + ' · ' + s.date + '</div></div>'
   ).join('');
-}
-renderSaved();
-
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
 }
 
 function switchTab(tab) {
@@ -457,6 +351,12 @@ function switchTab(tab) {
   document.getElementById('tabHome').classList.toggle('active', tab === 'home');
   document.getElementById('tabSaved').classList.toggle('active', tab === 'saved');
   if (tab === 'saved') renderSaved();
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
 }
 
 if ('serviceWorker' in navigator) {
