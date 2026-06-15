@@ -184,6 +184,7 @@ function saveD(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
 
 var todayDate=new Date();
 var today=todayDate.toISOString().split('T')[0];
+function getToday(){return new Date().toISOString().split('T')[0];}
 document.getElementById('dateLabel').textContent=todayDate.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
 
 function renderStreak(){
@@ -193,11 +194,11 @@ function renderStreak(){
 renderStreak();
 
 function bumpStreak(){
-  if(data.lastDate===today)return;
+  if(data.lastDate===getToday())return;
   var yd=new Date(todayDate);yd.setDate(yd.getDate()-1);
   var ys=yd.toISOString().split('T')[0];
   data.streak=data.lastDate===ys?data.streak+1:1;
-  data.lastDate=today;saveD();renderStreak();
+  data.lastDate=getToday();saveD();renderStreak();
 }
 
 var curQuote='',curAuthor='',loading=false;
@@ -240,7 +241,7 @@ document.getElementById('regenBtn').addEventListener('click',generate);
 document.getElementById('saveBtn').addEventListener('click',function(){
   if(!curQuote)return;
   if(data.saved.find(function(s){return s.quote===curQuote;})){toast('이미 저장됨');return;}
-  data.saved.unshift({quote:curQuote,author:curAuthor,date:today});
+  data.saved.unshift({quote:curQuote,author:curAuthor,date:getToday()});
   if(data.saved.length>50)data.saved=data.saved.slice(0,50);
   saveD();
   var sb=document.getElementById('saveBtn');
@@ -249,7 +250,7 @@ document.getElementById('saveBtn').addEventListener('click',function(){
 });
 
 function loadMood(){
-  var saved=data.moods[today];
+  var saved=data.moods[getToday()];
   document.querySelectorAll('.mood-btn').forEach(function(b){b.classList.toggle('selected',b.dataset.mood==saved);});
 }
 document.getElementById('moodSection').addEventListener('click',function(e){
@@ -257,21 +258,22 @@ document.getElementById('moodSection').addEventListener('click',function(e){
   if(!btn)return;
   document.querySelectorAll('.mood-btn').forEach(function(b){b.classList.remove('selected');});
   btn.classList.add('selected');
-  data.moods[today]=parseInt(btn.dataset.mood);
-  data.moodEmojis[today]=btn.dataset.emoji;
+  data.moods[getToday()]=parseInt(btn.dataset.mood);
+  data.moodEmojis[getToday()]=btn.dataset.emoji;
   saveD();toast('기분 저장 ✓');
 });
 
 function loadGratitude(){
   var g=data.gratitude[today]||['','',''];
-  document.getElementById('grat1').value=g[0]||'';
-  document.getElementById('grat2').value=g[1]||'';
-  document.getElementById('grat3').value=g[2]||'';
+  var g2=data.gratitude[getToday()]||['','',''];
+  document.getElementById('grat1').value=g2[0]||'';
+  document.getElementById('grat2').value=g2[1]||'';
+  document.getElementById('grat3').value=g2[2]||'';
 }
 document.getElementById('gratSaveBtn').addEventListener('click',function(){
   var g=[document.getElementById('grat1').value.trim(),document.getElementById('grat2').value.trim(),document.getElementById('grat3').value.trim()];
   if(!g[0]&&!g[1]&&!g[2])return;
-  data.gratitude[today]=g;saveD();toast('감사 3가지 저장 ✓');
+  data.gratitude[getToday()]=g;saveD();toast('감사 3가지 저장 ✓');
 });
 
 var calYear=todayDate.getFullYear(),calMonth=todayDate.getMonth();
@@ -341,12 +343,12 @@ function renderSaved(){
   list.innerHTML=data.saved.map(function(s){return '<div class="saved-item"><div class="si-text">“'+s.quote+'”</div><div class="si-meta">'+(s.author?'— '+s.author+' · ':'')+s.date+'</div></div>';}).join('');
 }
 function loadDiary(){
-  document.getElementById('diaryInput').value=data.diary[today]||'';
+  document.getElementById('diaryInput').value=data.diary[getToday()]||'';
 }
 document.getElementById('diarySaveBtn').addEventListener('click',function(){
   var v=document.getElementById('diaryInput').value.trim();
   if(!v)return;
-  data.diary[today]=v;saveD();toast('일기 저장 ✓');
+  data.diary[getToday()]=v;saveD();toast('일기 저장 ✓');
 });
 
 document.querySelectorAll('.tab-btn').forEach(function(btn){
