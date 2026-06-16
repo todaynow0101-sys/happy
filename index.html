@@ -184,8 +184,13 @@ function saveD(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
 
 var todayDate=new Date();
 var today=todayDate.toISOString().split('T')[0];
-function getToday(){return new Date().toISOString().split('T')[0];}
-document.getElementById('dateLabel').textContent=todayDate.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+function getToday(){
+  var now=new Date();
+  var kst=new Date(now.getTime()+9*60*60*1000);
+  return kst.toISOString().split('T')[0];
+}
+var kstNow=new Date(todayDate.getTime()+9*60*60*1000);
+document.getElementById('dateLabel').textContent=new Date(kstNow).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
 
 function renderStreak(){
   var s=data.streak;
