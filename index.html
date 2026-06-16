@@ -194,7 +194,7 @@ function sbFetch(path,method,body){
       'apikey':SB_KEY,
       'Authorization':'Bearer '+SB_KEY,
       'Content-Type':'application/json',
-      'Prefer':method==='POST'?'resolution=merge-duplicates,return=minimal':'return=minimal'
+      'Prefer':method==='POST'?'resolution=merge-duplicates,return=representation':'return=minimal'
     },
     body:body?JSON.stringify(body):undefined
   });
@@ -236,8 +236,33 @@ function saveField(fields){
   cache[td]=Object.assign(cache[td]||{},fields,{device_id:devId,date:td});
   saveCache();
   setSyn('저장 중...');
-  sbFetch('haru_data','POST',Object.assign({device_id:devId,date:td},fields))
-  .then(function(r){setSyn(r.ok?'✓ 저장됨':'');setTimeout(function(){setSyn('');},2000);})
+  // Try upsert via POST with merge-duplicates
+  fetch(SB_URL+'/rest/v1/haru_data',{
+    method:'POST',
+    headers:{
+      'apikey':SB_KEY,
+      'Authorization':'Bearer '+SB_KEY,
+      'Content-Type':'application/json',
+      'Prefer':'resolution=merge-duplicates,return=minimal'
+    },
+    body:JSON.stringify(Object.assign({device_id:devId,date:td},fields))
+  })
+  .then(function(r){
+    if(r.ok){setSyn('✓ 저장됨');setTimeout(function(){setSyn('');},2000);}
+    else{
+      // fallback: PATCH
+      return fetch(SB_URL+'/rest/v1/haru_data?device_id=eq.'+devId+'&date=eq.'+td,{
+        method:'PATCH',
+        headers:{
+          'apikey':SB_KEY,
+          'Authorization':'Bearer '+SB_KEY,
+          'Content-Type':'application/json',
+          'Prefer':'return=minimal'
+        },
+        body:JSON.stringify(fields)
+      }).then(function(r2){setSyn(r2.ok?'✓ 저장됨':'');setTimeout(function(){setSyn('');},2000);});
+    }
+  })
   .catch(function(){setSyn('');});
 }
 
