@@ -175,7 +175,13 @@ var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 
 function getToday(){var n=new Date();var k=new Date(n.getTime()+9*60*60*1000);return k.toISOString().split('T')[0];}
 
-var devId=(function(){var id=localStorage.getItem('haru_did');if(!id){id='d'+Math.random().toString(36).substr(2,9);localStorage.setItem('haru_did',id);}return id;})();
+var devId=(function(){
+  var urlParam=new URLSearchParams(window.location.search).get('restore');
+  if(urlParam){localStorage.setItem('haru_did',urlParam);history.replaceState({},'',window.location.pathname);return urlParam;}
+  var id=localStorage.getItem('haru_did');
+  if(!id){id='d'+Math.random().toString(36).substr(2,9);localStorage.setItem('haru_did',id);}
+  return id;
+})();
 var cache=(function(){try{return JSON.parse(localStorage.getItem('haru_c')||'{}')}catch(e){return{}}})();
 function saveCache(){try{localStorage.setItem('haru_c',JSON.stringify(cache))}catch(e){}}
 var streak=0;
