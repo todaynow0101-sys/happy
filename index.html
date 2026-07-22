@@ -68,9 +68,9 @@ body{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(-
 .gi:focus,.di:focus{border-color:var(--pink);background:white}
 .gi::placeholder,.di::placeholder{color:var(--hi)}
 .di{resize:none;line-height:1.6}
-.sr{display:flex;justify-content:stretch;margin-top:10px}
-.ssb{width:100%;padding:12px;border-radius:var(--rs);border:1.5px solid var(--pink);background:var(--pink);color:white;font-size:14px;font-weight:700;cursor:pointer}
-.ssb:active{opacity:.88}
+.sr{display:flex;justify-content:flex-end;margin-top:10px}
+.ssb{padding:7px 18px;border-radius:20px;border:1.5px solid var(--pink);background:white;color:var(--pd);font-size:13px;font-weight:600;cursor:pointer}
+.ssb:active{background:var(--pl)}
 .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .ct{font-size:15px;font-weight:700}
 .cn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--mu);padding:4px 8px}
@@ -132,7 +132,6 @@ body{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(-
       <div><h1>오늘의 한 마디 🌱</h1><div class="dt" id="dtLabel"></div></div>
       <div class="sp" id="logoutBtn">🔥 <span id="spNum">0</span>일 연속</div>
     </div>
-    <div id="dbgBar" style="font-size:11px;background:#fef;border:1px solid #f99;border-radius:8px;padding:6px 10px;margin-bottom:8px;word-break:break-all"></div>
     <div class="syn" id="synMsg"></div>
     <div class="qc"><div class="qb">
       <div class="qt ph" id="qtText">명언 받기를 눌러봐 ✨</div>
@@ -319,8 +318,6 @@ document.getElementById('logoutBtn').addEventListener('click',function(){
 function showApp(){
   document.getElementById('authScreen').style.display='none';
   document.getElementById('mainApp').style.display='block';
-  var dbg=document.getElementById('dbgBar');
-  if(dbg) dbg.textContent='uid:'+G.uid+' | tok:'+(G.token?G.token.substr(0,20)+'...':'null');
   loadToday();
 }
 
@@ -352,24 +349,38 @@ function saveField(fields){
   if(!G.uid||!G.token){toast('로그인이 필요해');return;}
   var td=getToday();
   setSyn('저장 중...');
-  api('haru_data','POST',Object.assign({user_id:G.uid,date:td},fields))
-  .then(function(r){
+  // 항상 PATCH 먼저 시도 (행이 있으면 업데이트)
+  fetch(SB_URL+'/rest/v1/haru_data?user_id=eq.'+G.uid+'&date=eq.'+td,{
+    method:'PATCH',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+G.token,'Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify(fields)
+  }).then(function(r){
     if(r.ok){
-      toast('✅ 저장됐어!');
-      setSyn('✓ 저장됨');
-      setTimeout(function(){setSyn('');},2000);
-    } else {
-      // PATCH fallback
-      fetch(SB_URL+'/rest/v1/haru_data?user_id=eq.'+G.uid+'&date=eq.'+td,{
-        method:'PATCH',
-        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+G.token,'Content-Type':'application/json','Prefer':'return=minimal'},
-        body:JSON.stringify(fields)
-      }).then(function(r2){
-        if(r2.ok){toast('✅ 저장됐어!');setSyn('✓ 저장됨');setTimeout(function(){setSyn('');},2000);}
-        else{toast('❌ 저장 실패. 다시 시도해봐');setSyn('');}
+      // PATCH 성공 - 근데 행이 없어도 204 반환하므로 확인
+      return fetch(SB_URL+'/rest/v1/haru_data?user_id=eq.'+G.uid+'&date=eq.'+td+'&select=id',{
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+G.token}
+      }).then(function(r2){return r2.json();})
+      .then(function(rows){
+        if(rows&&rows.length>0){
+          toast('✅ 저장됐어!');
+          setSyn('✓ 저장됨');
+          setTimeout(function(){setSyn('');},2000);
+        } else {
+          // 행 없음 - POST로 새로 생성
+          return fetch(SB_URL+'/rest/v1/haru_data',{
+            method:'POST',
+            headers:{'apikey':SB_KEY,'Authorization':'Bearer '+G.token,'Content-Type':'application/json','Prefer':'return=minimal'},
+            body:JSON.stringify(Object.assign({user_id:G.uid,date:td},fields))
+          }).then(function(r3){
+            if(r3.ok){toast('✅ 저장됐어!');setSyn('✓ 저장됨');setTimeout(function(){setSyn('');},2000);}
+            else{r3.text().then(function(t){toast('실패:'+t.substr(0,40));});}
+          });
+        }
       });
+    } else {
+      toast('❌ 오류 '+r.status);setSyn('');
     }
-  }).catch(function(){toast('❌ 네트워크 오류');setSyn('');});
+  }).catch(function(e){toast('❌ 네트워크 오류');setSyn('');});
 }
 
 function bumpStreak(){
@@ -439,9 +450,6 @@ document.getElementById('moodSec').addEventListener('click',function(e){
   saveField({mood:parseInt(b.dataset.mood),mood_emoji:b.dataset.emoji});
 });
 document.getElementById('btnGrat').addEventListener('click',function(){
-  var dbg=document.getElementById('dbgBar');
-  if(dbg) dbg.textContent='CLICK: uid:'+G.uid+' tok:'+(G.token?'ok':'null');
-  toast('uid:'+G.uid+' tok:'+(G.token?'ok':'null'));
   var g=[document.getElementById('g1').value.trim(),document.getElementById('g2').value.trim(),document.getElementById('g3').value.trim()];
   if(!g[0]&&!g[1]&&!g[2]){toast('내용을 입력해줘');return;}
   saveField({gratitude:g});
