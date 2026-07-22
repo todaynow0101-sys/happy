@@ -396,8 +396,11 @@ function applyData(row){
 
 function saveField(fields){
   var td=getToday();
-  if(!userId){ toast('로그인이 필요해'); console.log('userId null'); return; }
+  if(!userId){ toast('❌ 로그인 필요 userId:'+userId); return; }
+  if(!userToken){ toast('❌ 토큰없음'); return; }
+  toast('저장 중...');
   setSyn('저장 중...');
+  var body=Object.assign({user_id:userId,date:td},fields);
   fetch(SB_URL+'/rest/v1/haru_data', {
     method:'POST',
     headers:{
@@ -406,17 +409,26 @@ function saveField(fields){
       'Content-Type':'application/json',
       'Prefer':'resolution=merge-duplicates,return=minimal'
     },
-    body:JSON.stringify(Object.assign({user_id:userId,date:td},fields))
+    body:JSON.stringify(body)
   }).then(function(r){
-    if(r.ok){setSyn('✓ 저장됨');toast('저장됐어 ✓');setTimeout(function(){setSyn('');},2000);}
-    else{
+    if(r.ok){
+      setSyn('✓ 저장됨');
+      toast('✅ 저장됐어!');
+      setTimeout(function(){setSyn('');},2000);
+    } else {
+      r.text().then(function(t){toast('POST실패:'+r.status+' '+t.substr(0,30));});
+      // PATCH fallback
       return fetch(SB_URL+'/rest/v1/haru_data?user_id=eq.'+userId+'&date=eq.'+td,{
         method:'PATCH',
         headers:{'apikey':SB_KEY,'Authorization':'Bearer '+userToken,'Content-Type':'application/json','Prefer':'return=minimal'},
         body:JSON.stringify(fields)
-      }).then(function(r2){if(r2.ok){setSyn('✓ 저장됨');toast('저장됐어 ✓');}setTimeout(function(){setSyn('');},2000);});
+      }).then(function(r2){
+        if(r2.ok){setSyn('✓ 저장됨');toast('✅ 저장됐어(PATCH)!');}
+        else{r2.text().then(function(t){toast('PATCH실패:'+r2.status);});}
+        setTimeout(function(){setSyn('');},2000);
+      });
     }
-  }).catch(function(){setSyn('');});
+  }).catch(function(e){setSyn('');toast('❌ 오류:'+e.message);});
 }
 
 function bumpStreak(){
