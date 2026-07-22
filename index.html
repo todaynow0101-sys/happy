@@ -608,27 +608,35 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(
 
 // ── 앱 시작 ──
 (function init(){
-  if(loadSession()){
-    // 세션 있으면 일단 바로 앱 보여주고 백그라운드에서 갱신
-    showApp();
-    refreshSession().then(function(ok){
-      if(!ok){
-        // 갱신 실패해도 기존 토큰으로 시도 - 만료된 경우만 로그아웃
-        fetch(SB_URL+'/auth/v1/user',{
-          headers:{'apikey':SB_KEY,'Authorization':'Bearer '+userToken}
-        }).then(function(r){
-          if(!r.ok){
-            localStorage.removeItem('haru_session');
-            userToken=null; userId=null;
-            document.getElementById('mainApp').style.display='none';
-            document.getElementById('authScreen').style.display='block';
-          }
-        }).catch(function(){});
-      }
-    });
-  } else {
-    document.getElementById('authScreen').style.display='block';
-  }
+  // 항상 로그인 화면 먼저
+  document.getElementById('authScreen').style.display='block';
+  document.getElementById('mainApp').style.display='none';
+
+  if(!loadSession()){ return; }
+
+  // 세션 있으면 토큰 유효한지 확인
+  fetch(SB_URL+'/auth/v1/user',{
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+userToken}
+  }).then(function(r){
+    if(r.ok){
+      return r.json().then(function(u){
+        userId=u.id;
+        showApp();
+      });
+    } else {
+      // 토큰 만료 - refresh 시도
+      return refreshSession().then(function(ok){
+        if(ok){ showApp(); }
+        else {
+          localStorage.removeItem('haru_session');
+          // 로그인 화면 이미 보이고 있음
+        }
+      });
+    }
+  }).catch(function(){
+    // 네트워크 오류면 로그인 화면 유지
+    localStorage.removeItem('haru_session');
+  });
 })();
 </script>
 </body>
