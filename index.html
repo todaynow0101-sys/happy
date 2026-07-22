@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ff9aa2">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-wQeb-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="하루">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-192x192.png">
@@ -436,6 +436,7 @@ document.getElementById('moodSec').addEventListener('click',function(e){
   saveField({mood:parseInt(b.dataset.mood),mood_emoji:b.dataset.emoji});
 });
 document.getElementById('btnGrat').addEventListener('click',function(){
+  toast('uid:'+G.uid+' tok:'+(G.token?'ok':'null'));
   var g=[document.getElementById('g1').value.trim(),document.getElementById('g2').value.trim(),document.getElementById('g3').value.trim()];
   if(!g[0]&&!g[1]&&!g[2]){toast('내용을 입력해줘');return;}
   saveField({gratitude:g});
