@@ -167,7 +167,7 @@ body{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(-
         </div>
         <div class="sr"><button class="ssb" id="btnGrat">저장</button></div>
       </div>
-      <div class="sc" id="diarySec" style="display:none">
+      <div class="sc" id="diarySec" style="display:none;margin-bottom:80px">
         <div class="st">오늘 하루 한 줄 일기 ✍️</div>
         <textarea class="di" id="diaryTxt" placeholder="오늘 하루를 한 줄로 표현하면?" maxlength="100" rows="2"></textarea>
         <div class="sr"><button class="ssb" id="btnDiary">저장</button></div>
@@ -396,6 +396,7 @@ function applyData(row){
 
 function saveField(fields){
   var td=getToday();
+  if(!userId){ toast('로그인이 필요해'); console.log('userId null'); return; }
   setSyn('저장 중...');
   fetch(SB_URL+'/rest/v1/haru_data', {
     method:'POST',
@@ -407,13 +408,13 @@ function saveField(fields){
     },
     body:JSON.stringify(Object.assign({user_id:userId,date:td},fields))
   }).then(function(r){
-    if(r.ok){setSyn('✓ 저장됨');setTimeout(function(){setSyn('');},2000);}
+    if(r.ok){setSyn('✓ 저장됨');toast('저장됐어 ✓');setTimeout(function(){setSyn('');},2000);}
     else{
       return fetch(SB_URL+'/rest/v1/haru_data?user_id=eq.'+userId+'&date=eq.'+td,{
         method:'PATCH',
         headers:{'apikey':SB_KEY,'Authorization':'Bearer '+userToken,'Content-Type':'application/json','Prefer':'return=minimal'},
         body:JSON.stringify(fields)
-      }).then(function(r2){setSyn(r2.ok?'✓ 저장됨':'');setTimeout(function(){setSyn('');},2000);});
+      }).then(function(r2){if(r2.ok){setSyn('✓ 저장됨');toast('저장됐어 ✓');}setTimeout(function(){setSyn('');},2000);});
     }
   }).catch(function(){setSyn('');});
 }
@@ -489,13 +490,17 @@ document.getElementById('moodSec').addEventListener('click',function(e){
   toast('기분 저장 ✓');
 });
 document.getElementById('btnGrat').addEventListener('click',function(){
-  var g=[document.getElementById('g1').value.trim(),document.getElementById('g2').value.trim(),document.getElementById('g3').value.trim()];
-  if(!g[0]&&!g[1]&&!g[2])return;
+  var g=[
+    document.getElementById('g1').value.trim(),
+    document.getElementById('g2').value.trim(),
+    document.getElementById('g3').value.trim()
+  ];
   saveField({gratitude:g});toast('감사 3가지 저장 ✓');
 });
 document.getElementById('btnDiary').addEventListener('click',function(){
-  var v=document.getElementById('diaryTxt').value.trim();if(!v)return;
-  saveField({diary:v});toast('일기 저장 ✓');
+  var v=document.getElementById('diaryTxt').value.trim();
+  if(!v){toast('내용을 입력해줘');return;}
+  saveField({diary:v});
 });
 
 // ── 캘린더 ──
@@ -592,9 +597,22 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(
 // ── 앱 시작 ──
 (function init(){
   if(loadSession()){
+    // 세션 있으면 일단 바로 앱 보여주고 백그라운드에서 갱신
+    showApp();
     refreshSession().then(function(ok){
-      if(ok){ showApp(); }
-      else { localStorage.removeItem('haru_session'); document.getElementById('authScreen').style.display='block'; }
+      if(!ok){
+        // 갱신 실패해도 기존 토큰으로 시도 - 만료된 경우만 로그아웃
+        fetch(SB_URL+'/auth/v1/user',{
+          headers:{'apikey':SB_KEY,'Authorization':'Bearer '+userToken}
+        }).then(function(r){
+          if(!r.ok){
+            localStorage.removeItem('haru_session');
+            userToken=null; userId=null;
+            document.getElementById('mainApp').style.display='none';
+            document.getElementById('authScreen').style.display='block';
+          }
+        }).catch(function(){});
+      }
     });
   } else {
     document.getElementById('authScreen').style.display='block';
