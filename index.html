@@ -351,6 +351,7 @@ function showApp(){
   document.getElementById('authScreen').style.display='none';
   document.getElementById('mainApp').style.display='block';
   loadToday();
+  loadStreak();
 }
 
 // ── 데이터 ──
@@ -360,6 +361,10 @@ function loadToday(){
   .then(function(r){if(!r.ok)r.text().then(function(t){console.error('오늘 데이터 로드 실패',r.status,t);});return r.json();})
   .then(function(rows){if(rows&&rows.length)applyData(rows[0]);})
   .catch(function(e){console.error(e);});
+}
+// 스트릭은 앱 시작할 때만 DB에서 불러옴 (명언 받을 때마다 다시 불러오면
+// 방금 올린 로컬 스트릭 값을 옛 DB 값이 덮어써버리는 경쟁 상태가 생김)
+function loadStreak(){
   api('haru_streak?user_id=eq.'+G.uid+'&select=*')
   .then(function(r){return r.json();})
   .then(function(rows){if(rows&&rows.length){G.streak=rows[0].streak||0;renderStreak();}})
