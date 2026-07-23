@@ -325,9 +325,9 @@ function showApp(){
 function loadToday(){
   var td=getToday();
   api('haru_data?user_id=eq.'+G.uid+'&date=eq.'+td+'&select=*')
-  .then(function(r){return r.json();})
+  .then(function(r){if(!r.ok)r.text().then(function(t){console.error('오늘 데이터 로드 실패',r.status,t);});return r.json();})
   .then(function(rows){if(rows&&rows.length)applyData(rows[0]);})
-  .catch(function(){});
+  .catch(function(e){console.error(e);});
   api('haru_streak?user_id=eq.'+G.uid+'&select=*')
   .then(function(r){return r.json();})
   .then(function(rows){if(rows&&rows.length){G.streak=rows[0].streak||0;renderStreak();}})
@@ -349,38 +349,25 @@ function saveField(fields){
   if(!G.uid||!G.token){toast('로그인이 필요해');return;}
   var td=getToday();
   setSyn('저장 중...');
-  // 항상 PATCH 먼저 시도 (행이 있으면 업데이트)
-  fetch(SB_URL+'/rest/v1/haru_data?user_id=eq.'+G.uid+'&date=eq.'+td,{
-    method:'PATCH',
-    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+G.token,'Content-Type':'application/json','Prefer':'return=minimal'},
-    body:JSON.stringify(fields)
+  // 단일 upsert 호출: user_id+date가 겹치면 병합, 없으면 새로 생성
+  // (haru_data 테이블에 (user_id,date) UNIQUE 제약이 있어야 정상 동작함)
+  fetch(SB_URL+'/rest/v1/haru_data?on_conflict=user_id,date',{
+    method:'POST',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+G.token,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify(Object.assign({user_id:G.uid,date:td},fields))
   }).then(function(r){
     if(r.ok){
-      // PATCH 성공 - 근데 행이 없어도 204 반환하므로 확인
-      return fetch(SB_URL+'/rest/v1/haru_data?user_id=eq.'+G.uid+'&date=eq.'+td+'&select=id',{
-        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+G.token}
-      }).then(function(r2){return r2.json();})
-      .then(function(rows){
-        if(rows&&rows.length>0){
-          toast('✅ 저장됐어!');
-          setSyn('✓ 저장됨');
-          setTimeout(function(){setSyn('');},2000);
-        } else {
-          // 행 없음 - POST로 새로 생성
-          return fetch(SB_URL+'/rest/v1/haru_data',{
-            method:'POST',
-            headers:{'apikey':SB_KEY,'Authorization':'Bearer '+G.token,'Content-Type':'application/json','Prefer':'return=minimal'},
-            body:JSON.stringify(Object.assign({user_id:G.uid,date:td},fields))
-          }).then(function(r3){
-            if(r3.ok){toast('✅ 저장됐어!');setSyn('✓ 저장됨');setTimeout(function(){setSyn('');},2000);}
-            else{r3.text().then(function(t){toast('실패:'+t.substr(0,40));});}
-          });
-        }
-      });
+      toast('✅ 저장됐어!');
+      setSyn('✓ 저장됨');
+      setTimeout(function(){setSyn('');},2000);
     } else {
-      toast('❌ 오류 '+r.status);setSyn('');
+      return r.text().then(function(t){
+        console.error('haru_data 저장 실패',r.status,t);
+        toast('❌ 저장 실패 ('+r.status+')');
+        setSyn('');
+      });
     }
-  }).catch(function(e){toast('❌ 네트워크 오류');setSyn('');});
+  }).catch(function(e){console.error(e);toast('❌ 네트워크 오류');setSyn('');});
 }
 
 function bumpStreak(){
@@ -394,11 +381,11 @@ function bumpStreak(){
   G.streak=ld===ys?G.streak+1:1;
   localStorage.setItem(lk,td);
   renderStreak();
-  fetch(SB_URL+'/rest/v1/haru_streak',{
+  fetch(SB_URL+'/rest/v1/haru_streak?on_conflict=user_id',{
     method:'POST',
     headers:{'apikey':SB_KEY,'Authorization':'Bearer '+G.token,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
     body:JSON.stringify({user_id:G.uid,streak:G.streak,last_date:td})
-  }).catch(function(){});
+  }).then(function(r){if(!r.ok)r.text().then(function(t){console.error('haru_streak 저장 실패',r.status,t);});}).catch(function(e){console.error(e);});
 }
 
 // ── 명언 ──
@@ -435,13 +422,30 @@ document.getElementById('btnGen').addEventListener('click',generate);
 document.getElementById('btnRegen').addEventListener('click',generate);
 document.getElementById('btnSave').addEventListener('click',function(){
   if(!curQ)return;
-  document.getElementById('btnSave').classList.add('sv');
-  document.getElementById('btnSave').textContent='✅ 저장됨';
+  var b=document.getElementById('btnSave');
+  b.classList.add('sv');
+  b.textContent='✅ 저장됨';
   fetch(SB_URL+'/rest/v1/haru_saved',{
     method:'POST',
     headers:{'apikey':SB_KEY,'Authorization':'Bearer '+G.token,'Content-Type':'application/json','Prefer':'return=minimal'},
     body:JSON.stringify({user_id:G.uid,quote:curQ,author:curA,date:getToday()})
-  }).then(function(){toast('명언 저장 ✓');}).catch(function(){});
+  }).then(function(r){
+    if(r.ok){
+      toast('명언 저장 ✓');
+    } else {
+      return r.text().then(function(t){
+        console.error('haru_saved 저장 실패',r.status,t);
+        b.classList.remove('sv');
+        b.textContent='🔖 저장';
+        toast('❌ 저장 실패 ('+r.status+')');
+      });
+    }
+  }).catch(function(e){
+    console.error(e);
+    b.classList.remove('sv');
+    b.textContent='🔖 저장';
+    toast('❌ 네트워크 오류');
+  });
 });
 document.getElementById('moodSec').addEventListener('click',function(e){
   var b=e.target.closest('.mb');if(!b)return;
@@ -466,9 +470,9 @@ function loadCalData(y,m){
   var from=y+'-'+String(m+1).padStart(2,'0')+'-01';
   var to=y+'-'+String(m+1).padStart(2,'0')+'-31';
   api('haru_data?user_id=eq.'+G.uid+'&date=gte.'+from+'&date=lte.'+to+'&select=date,mood,mood_emoji,gratitude,diary')
-  .then(function(r){return r.json();})
+  .then(function(r){if(!r.ok)r.text().then(function(t){console.error('캘린더 데이터 로드 실패',r.status,t);});return r.json();})
   .then(function(rows){G.calData={};if(rows)rows.forEach(function(r){G.calData[r.date]=r;});renderCal();})
-  .catch(function(){renderCal();});
+  .catch(function(e){console.error(e);renderCal();});
 }
 function renderCal(){
   var td=getToday();
