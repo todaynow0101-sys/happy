@@ -103,8 +103,9 @@ body{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(-
 .tb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;cursor:pointer;font-size:10px;font-weight:500;color:var(--hi)}
 .tb .ti{font-size:22px;line-height:1}
 .tb.on{color:var(--pink)}
-.toast{position:fixed;bottom:calc(var(--nav)+env(safe-area-inset-bottom)+12px);left:50%;transform:translateX(-50%) translateY(8px);background:var(--text);color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:9999}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.92);background:rgba(45,35,38,.94);color:white;padding:16px 26px;border-radius:16px;font-size:14px;font-weight:600;opacity:0;transition:opacity .2s ease,transform .2s ease;pointer-events:none;white-space:nowrap;z-index:9999;box-shadow:0 10px 30px rgba(0,0,0,.22)}
+.toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.ssb.sv2{background:var(--pink);border-color:var(--pink);color:white}
 </style>
 </head>
 <body>
@@ -225,7 +226,7 @@ document.getElementById('dtLabel').textContent=kst.toLocaleDateString('ko-KR',{y
 function toast(m){
   var t=document.getElementById('toastEl');
   t.textContent=m; t.classList.add('show');
-  setTimeout(function(){t.classList.remove('show');},2500);
+  setTimeout(function(){t.classList.remove('show');},1600);
 }
 function setSyn(m){document.getElementById('synMsg').textContent=m||'';}
 function renderStreak(){
@@ -235,8 +236,39 @@ function renderStreak(){
 }
 
 // ── API ──
+function refreshToken(){
+  var s=null;
+  try{s=JSON.parse(localStorage.getItem('haru_s')||'null');}catch(e){}
+  if(!s||!s.r)return Promise.reject(new Error('no refresh token'));
+  return fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{
+    method:'POST',
+    headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({refresh_token:s.r})
+  }).then(function(r){return r.json();})
+  .then(function(d){
+    if(d.access_token){
+      G.token=d.access_token; G.uid=d.user.id;
+      try{localStorage.setItem('haru_s',JSON.stringify({t:d.access_token,r:d.refresh_token,u:d.user.id}));}catch(e){}
+      return d.access_token;
+    }
+    return Promise.reject(new Error('refresh failed'));
+  });
+}
+// 401(토큰 만료) 뜨면 자동으로 토큰 갱신 후 한 번 재시도
+function authFetch(url,opts){
+  opts=opts||{};
+  return fetch(url,opts).then(function(r){
+    if(r.status===401){
+      return refreshToken().then(function(){
+        var opts2=Object.assign({},opts,{headers:Object.assign({},opts.headers,{'Authorization':'Bearer '+G.token})});
+        return fetch(url,opts2);
+      }).catch(function(){return r;});
+    }
+    return r;
+  });
+}
 function api(path, method, body){
-  return fetch(SB_URL+'/rest/v1/'+path,{
+  return authFetch(SB_URL+'/rest/v1/'+path,{
     method: method||'GET',
     headers:{
       'apikey': SB_KEY,
@@ -345,10 +377,11 @@ function applyData(row){
   if(row.diary)document.getElementById('diaryTxt').value=row.diary;
 }
 
-function saveField(fields){
+function saveField(fields, btn){
   if(!G.uid||!G.token){toast('로그인이 필요해');return;}
   var td=getToday();
-  setSyn('저장 중...');
+  var origText;
+  if(btn){origText=btn.textContent;btn.disabled=true;btn.textContent='저장 중...';}
   // 단일 upsert 호출: user_id+date가 겹치면 병합, 없으면 새로 생성
   // (haru_data 테이블에 (user_id,date) UNIQUE 제약이 있어야 정상 동작함)
   fetch(SB_URL+'/rest/v1/haru_data?on_conflict=user_id,date',{
@@ -358,16 +391,22 @@ function saveField(fields){
   }).then(function(r){
     if(r.ok){
       toast('✅ 저장됐어!');
-      setSyn('✓ 저장됨');
-      setTimeout(function(){setSyn('');},2000);
+      if(btn){
+        btn.textContent='✅ 저장됨';
+        btn.classList.add('sv2');
+        setTimeout(function(){btn.textContent=origText;btn.classList.remove('sv2');btn.disabled=false;},1400);
+      }
     } else {
       return r.text().then(function(t){
         console.error('haru_data 저장 실패',r.status,t);
         toast('❌ 저장 실패 ('+r.status+')');
-        setSyn('');
+        if(btn){btn.textContent=origText;btn.disabled=false;}
       });
     }
-  }).catch(function(e){console.error(e);toast('❌ 네트워크 오류');setSyn('');});
+  }).catch(function(e){
+    console.error(e);toast('❌ 네트워크 오류');
+    if(btn){btn.textContent=origText;btn.disabled=false;}
+  });
 }
 
 function bumpStreak(){
@@ -456,12 +495,12 @@ document.getElementById('moodSec').addEventListener('click',function(e){
 document.getElementById('btnGrat').addEventListener('click',function(){
   var g=[document.getElementById('g1').value.trim(),document.getElementById('g2').value.trim(),document.getElementById('g3').value.trim()];
   if(!g[0]&&!g[1]&&!g[2]){toast('내용을 입력해줘');return;}
-  saveField({gratitude:g});
+  saveField({gratitude:g},this);
 });
 document.getElementById('btnDiary').addEventListener('click',function(){
   var v=document.getElementById('diaryTxt').value.trim();
   if(!v){toast('내용을 입력해줘');return;}
-  saveField({diary:v});
+  saveField({diary:v},this);
 });
 
 // ── 캘린더 ──
